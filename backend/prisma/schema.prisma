@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  household     Household?     @relation("HouseholdOwner")
+  foodItems     FoodItem[]
+  shoppingItems ShoppingItem[]
+  foodWastes    FoodWaste[]
+}
+
+model Household {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String   @unique
+  owner     User     @relation("HouseholdOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FoodItem {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  category        String   @default("Pantry")
+  quantity        Float    @default(1)
+  unit            String   @default("pcs")
+  purchaseDate    DateTime @default(now())
+  expiryDate      DateTime
+  storageLocation String   @default("Fridge")
+  status          String   @default("FRESH") // FRESH, EXPIRING_SOON, EXPIRED
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  wastes          FoodWaste[]
+
+  @@index([userId])
+  @@index([expiryDate])
+  @@index([status])
+}
+
+model ShoppingItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Float    @default(1)
+  unit      String   @default("pcs")
+  purchased Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model FoodWaste {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodItemId String?
+  foodItem   FoodItem? @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+  name       String
+  quantity   Float     @default(1)
+  unit       String    @default("pcs")
+  reason     String    @default("Expired")
+  date       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([date])
+}
+
+model Recipe {
+  id           String   @id @default(uuid())
+  name         String
+  ingredients  String   // JSON string array of ingredient names or objects e.g. ["Tomatoes", "Spinach"]
+  instructions String   // Multi-line instructions or step list
+  image        String
+  category     String   @default("Main")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
